@@ -2,12 +2,41 @@ import express from "express";
 import bodyParser from "body-parser";
 
 const app = express();
-const port = 3000;
+const port = 5000;
 
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.use(express.static("public"));
 
 let posts = [];
+let users = [];
+
+// check backend status
+app.get("/status", (req, res) => {
+  return res.status(200).json({ message: "OK" });
+});
+
+// PUT /users/add
+app.put("/users/add", (req, res) => {
+  const newUser = req.body;
+  if (users.map((user) => user.username).includes(newUser.username)) {
+    return res.json({ status: "Unavailable" });
+  }
+  users.push(newUser);
+  return res.json({ status: "OK" });
+});
+
+// POST /users/auth
+app.post("/users/auth", (req, res) => {
+  const userInfo = req.body;
+  const serverUser = users.find((user) => user.username === userInfo.username);
+  if (serverUser === undefined) {
+    return res.json({ status: "Not Found" });
+  } else if (serverUser.password !== userInfo.password) {
+    return res.json({ status: "Unauthorized" });
+  } else {
+    return res.json({ status: "OK" });
+  }
+});
 
 // render home page
 // app.get("/", (req, res) => {
@@ -45,7 +74,7 @@ let posts = [];
 //   const post = posts.filter((post) => post.id === Number(postID))[0];
 //   if (post) {
 //     post.date = `edited: ${newDateString(Date.now())}`;
-//     post.userName = req.body.user;
+//     post.username = req.body.user;
 //     post.title = req.body.title;
 //     post.body = req.body.body;
 //     post.tag = req.body.tag;
@@ -69,7 +98,7 @@ function newPost(user, title, body, tag) {
   const postID = Date.now();
   const postObj = {
     id: Number(postID),
-    userName: user && user.length > 0 ? user : "no-user",
+    username: user && user.length > 0 ? user : "no-user",
     date: newDateString(postID),
     title: title && title.length > 0 ? title : "no title",
     body: body && body.length > 0 ? body : "no content",
