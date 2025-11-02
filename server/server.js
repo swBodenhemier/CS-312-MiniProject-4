@@ -38,6 +38,45 @@ app.post("/users/auth", (req, res) => {
   }
 });
 
+// GET /posts
+app.get("/posts", (req, res) => {
+  res.json(posts);
+});
+
+// PUT /posts/new
+app.put("/posts/new", (req, res) => {
+  const postCreator = users.find((user) => user.username === req.body.user);
+  const creatorName = postCreator ? postCreator.displayName : req.body.user;
+  const newPost = {
+    ...req.body,
+    id: Date.now(),
+    creatorName: creatorName,
+  };
+  posts.unshift(newPost);
+  res.json(posts);
+});
+
+// DELETE /posts/delete/:id
+app.delete("/posts/delete/:id", (req, res) => {
+  const postID = req.params.id;
+  posts = posts.filter((post) => `${postID}` !== `${post.id}`);
+  res.json(posts);
+});
+
+// PATCH /posts/edit/:id
+app.patch("/posts/edit/:id", (req, res) => {
+  const postID = req.params.id;
+  const thisPost = posts.find((post) => `${postID}` === `${post.id}`);
+  if (thisPost && req.body) {
+    thisPost.title = req.body.title;
+    thisPost.body = req.body.body;
+  } else {
+    ``;
+    return res.sendStatus(404);
+  }
+  return res.json(posts);
+});
+
 // render home page
 // app.get("/", (req, res) => {
 //   render(res, "none", null);
@@ -105,12 +144,6 @@ function newPost(user, title, body, tag) {
     tag: tag,
   };
   posts.push(postObj);
-}
-
-// create a formatted date string
-function newDateString(date) {
-  const dateObj = new Date(date);
-  return `${dateObj.toLocaleDateString()} at ${dateObj.toLocaleTimeString()}`;
 }
 
 // render the index file with the expected variables

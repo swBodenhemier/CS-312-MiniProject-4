@@ -26,3 +26,6 @@ h2 {
 input {
   @apply bg-slate-100 border border-[#709090] rounded-md px-2;
 }
+.input {
+  @apply bg-slate-100 border border-[#709090] rounded-md px-2;
+}

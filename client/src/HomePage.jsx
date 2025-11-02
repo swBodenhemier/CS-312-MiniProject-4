@@ -6,10 +6,21 @@ export function HomePage() {
   const [showSignup, setShowSignup] = useState(false);
   const [showSignin, setShowSignin] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
+  const [showEditPost, setShowEditPost] = useState(false);
+  const [currentPost, setCurrentPost] = useState({});
 
   // client side state
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
+
+  // get posts on first render
+  useEffect(() => {
+    async function getPosts() {
+      const result = await axios.get("/posts");
+      setPosts(result.data);
+    }
+    getPosts();
+  }, []);
 
   return (
     <div className="w-full h-screen flex flex-col items-center bg-slate-200 p-4">
@@ -38,9 +49,42 @@ export function HomePage() {
               Create New Post
             </button>
           )}
-          <div className="pt-4">
+          <div className="pt-4 w-full flex flex-col gap-4 items-center">
             {posts.length > 0 ? (
-              posts.map((post) => <div className="segment"></div>)
+              posts.map((post) => (
+                <div
+                  className="segment w-full flex flex-col items-center !pt-2 !px-0"
+                  key={post.id}
+                >
+                  <div className="w-full border-b border-[#709090] pb-1 px-10 flex justify-between">
+                    <div>User: {post.creatorName}</div>
+                    <div>{newDateString(post.id)}</div>
+                  </div>
+                  <div className="w-full px-20 pt-5 flex flex-col items-center">
+                    <h2>{post.title}</h2>
+                    <div className="w-full py-4">{post.body}</div>
+                    {user === post.user && (
+                      <div className="flex pt-4 gap-4">
+                        <button
+                          className="button"
+                          onClick={() => deletePost(post.id, setPosts)}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          className="button"
+                          onClick={() => {
+                            setShowEditPost(true);
+                            setCurrentPost(post);
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
             ) : (
               <div>No posts yet...</div>
             )}
@@ -67,7 +111,20 @@ export function HomePage() {
           setUser={(user) => setUser(user)}
         />
       )}
-      {showNewPost && <BlogPostForm hide={() => setShowNewPost(false)} />}
+      {showNewPost && (
+        <NewBlogPost
+          hide={() => setShowNewPost(false)}
+          setPosts={setPosts}
+          user={user}
+        />
+      )}
+      {showEditPost && (
+        <EditBlogPost
+          hide={() => setShowEditPost(false)}
+          post={currentPost}
+          setPosts={setPosts}
+        />
+      )}
     </div>
   );
 }
@@ -223,14 +280,18 @@ function Signin({ hide, signup, setUser }) {
   );
 }
 
-function BlogPostForm({ hide }) {
+function NewBlogPost({ hide, setPosts, user }) {
   const [formOptions, setFormOptions] = useState({
     title: "",
     body: "",
   });
 
   async function createPost() {
-    console.log(formOptions);
+    const result = await axios.put("/posts/new", {
+      ...formOptions,
+      user: user,
+    });
+    setPosts(result.data);
     hide();
   }
 
@@ -242,7 +303,7 @@ function BlogPostForm({ hide }) {
           <span className="flex justify-between">
             <label className="pr-2">Title: </label>
             <input
-              className="w-50"
+              className="w-80"
               onChange={(e) =>
                 setFormOptions((prev) => {
                   prev.title = e.target.value;
@@ -253,15 +314,15 @@ function BlogPostForm({ hide }) {
           </span>
           <span className="flex justify-between">
             <label className="pr-2">Body: </label>
-            <input
-              className="w-50"
+            <textarea
+              className="input w-80"
               onChange={(e) =>
                 setFormOptions((prev) => {
                   prev.body = e.target.value;
                   return prev;
                 })
               }
-            />
+            ></textarea>
           </span>
         </div>
         <div className="flex gap-4">
@@ -275,4 +336,72 @@ function BlogPostForm({ hide }) {
       </div>
     </div>
   );
+}
+
+function EditBlogPost({ hide, post, setPosts }) {
+  const [formOptions, setFormOptions] = useState({
+    title: post.title,
+    body: post.body,
+  });
+
+  async function editPost() {
+    const result = await axios.patch(`/posts/edit/${post.id}`, formOptions);
+    setPosts(result.data);
+    hide();
+  }
+
+  return (
+    <div className="popup">
+      <div className="segment max-w-2xl flex flex-col items-center gap-4">
+        <h2>New Post</h2>
+        <div className="flex flex-col gap-2">
+          <span className="flex justify-between">
+            <label className="pr-2">Title: </label>
+            <input
+              className="w-80"
+              onChange={(e) =>
+                setFormOptions((prev) => {
+                  prev.title = e.target.value;
+                  return prev;
+                })
+              }
+              defaultValue={post.title}
+            />
+          </span>
+          <span className="flex justify-between">
+            <label className="pr-2">Body: </label>
+            <textarea
+              className="input w-80 h-20"
+              onChange={(e) =>
+                setFormOptions((prev) => {
+                  prev.body = e.target.value;
+                  return prev;
+                })
+              }
+              defaultValue={post.body}
+            ></textarea>
+          </span>
+        </div>
+        <div className="flex gap-4">
+          <button className="button" onClick={hide}>
+            Cancel
+          </button>
+          <button className="button" onClick={editPost}>
+            Edit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function deletePost(postID, setPosts) {
+  const result = await axios.delete(`/posts/delete/${postID}`);
+  setPosts(result.data);
+}
+
+// create a formatted date string
+function newDateString(date) {
+  const dateObj = new Date(date);
+  return `${dateObj.toLocaleDateString()} at ${dateObj.toLocaleTimeString()}`;
 }
